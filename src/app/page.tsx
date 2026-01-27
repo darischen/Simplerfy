@@ -71,6 +71,15 @@ export default function Home() {
     }
   };
 
+  const downloadTailoredPdf = () => {
+    if (tailoredPdf) {
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${tailoredPdf}`;
+      link.download = 'tailored-resume.pdf';
+      link.click();
+    }
+  };
+
   return (
     <main className="min-h-screen p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Simplerfy</h1>
@@ -140,12 +149,20 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Tailored Resume</h2>
             {tailoredLatex && (
-              <button
-                onClick={copyTailoredLatex}
-                className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
-              >
-                Copy LaTeX
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={copyTailoredLatex}
+                  className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
+                >
+                  Copy LaTeX
+                </button>
+                <button
+                  onClick={downloadTailoredPdf}
+                  className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
+                >
+                  Download PDF
+                </button>
+              </div>
             )}
           </div>
           <div className="h-[800px] border rounded-lg overflow-hidden bg-gray-100">
