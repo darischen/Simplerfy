@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export default function TailorPage() {
   const [latex, setLatex] = useState('');
@@ -9,7 +9,9 @@ export default function TailorPage() {
   const [tailoredPdf, setTailoredPdf] = useState<string | null>(null);
   const [tailoredLatex, setTailoredLatex] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const compileLaTeX = async (latexContent: string): Promise<string> => {
     const response = await fetch('/api/compile-latex', {
@@ -80,6 +82,39 @@ export default function TailorPage() {
     }
   };
 
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      const response = await fetch('/api/pdf-to-latex', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to parse PDF');
+      }
+
+      const data = await response.json();
+      setLatex(data.latex);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to parse PDF');
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <main className="min-h-screen p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Tailor Resume</h1>
@@ -88,7 +123,25 @@ export default function TailorPage() {
       <div className="grid grid-cols-2 gap-8 mb-8">
         {/* LaTeX Input */}
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">LaTeX Resume</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">LaTeX Resume</h2>
+            <div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handlePdfUpload}
+                accept=".pdf"
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black disabled:opacity-50"
+              >
+                {uploading ? 'Parsing...' : 'Upload PDF'}
+              </button>
+            </div>
+          </div>
           <textarea
             className="w-full h-64 p-4 border rounded-lg font-mono text-sm text-black bg-white"
             placeholder="Paste your LaTeX resume code here..."
