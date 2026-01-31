@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dir /s /b \"C:\\\\Users\\\\daris\\\\Desktop\\\\School\\\\simplerfy\\\\src\")",
-      "Bash(npm run dev:*)"
-    ]
-  }
-}
