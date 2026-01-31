@@ -1,32 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { getProfile, getApplications, JobApplication } from '@/lib/storage';
 
+function getInitialHasProfile(): boolean {
+  if (typeof window === 'undefined') return false;
+  const profile = getProfile();
+  return !!profile?.basics.firstName;
+}
+
+function getInitialApplications(): JobApplication[] {
+  if (typeof window === 'undefined') return [];
+  return getApplications().slice(0, 5);
+}
+
+function getInitialStats() {
+  if (typeof window === 'undefined') {
+    return { total: 0, applied: 0, interviewing: 0, offers: 0 };
+  }
+  const apps = getApplications();
+  return {
+    total: apps.length,
+    applied: apps.filter((a) => a.status === 'applied').length,
+    interviewing: apps.filter((a) => ['screening', 'interviewing'].includes(a.status)).length,
+    offers: apps.filter((a) => a.status === 'offer').length,
+  };
+}
+
 export default function Dashboard() {
-  const [hasProfile, setHasProfile] = useState(false);
-  const [applications, setApplications] = useState<JobApplication[]>([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    applied: 0,
-    interviewing: 0,
-    offers: 0,
-  });
-
-  useEffect(() => {
-    const profile = getProfile();
-    setHasProfile(!!profile?.basics.firstName);
-
-    const apps = getApplications();
-    setApplications(apps.slice(0, 5));
-    setStats({
-      total: apps.length,
-      applied: apps.filter((a) => a.status === 'applied').length,
-      interviewing: apps.filter((a) => ['screening', 'interviewing'].includes(a.status)).length,
-      offers: apps.filter((a) => a.status === 'offer').length,
-    });
-  }, []);
+  const [hasProfile] = useState(getInitialHasProfile);
+  const [applications] = useState(getInitialApplications);
+  const [stats] = useState(getInitialStats);
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
