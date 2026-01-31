@@ -2,12 +2,22 @@
 
 import { useState, useRef } from 'react';
 
+interface ScoreResult {
+  score: number;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  suggestions: string[];
+}
+
 export default function TailorPage() {
   const [latex, setLatex] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [originalPdf, setOriginalPdf] = useState<string | null>(null);
   const [tailoredPdf, setTailoredPdf] = useState<string | null>(null);
   const [tailoredLatex, setTailoredLatex] = useState<string | null>(null);
+  const [originalScore, setOriginalScore] = useState<ScoreResult | null>(null);
+  const [tailoredScore, setTailoredScore] = useState<ScoreResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +39,20 @@ export default function TailorPage() {
     return data.pdf;
   };
 
+  const scoreResume = async (resume: string): Promise<ScoreResult> => {
+    const response = await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resume, jobDescription }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to score resume');
+    }
+
+    return response.json();
+  };
+
   const handleTailor = async () => {
     if (!latex || !jobDescription) return;
 
@@ -36,11 +60,17 @@ export default function TailorPage() {
     setError(null);
     setOriginalPdf(null);
     setTailoredPdf(null);
+    setOriginalScore(null);
+    setTailoredScore(null);
 
     try {
-      // Compile original LaTeX
-      const originalPdfBase64 = await compileLaTeX(latex);
+      // Compile original LaTeX and score it in parallel
+      const [originalPdfBase64, origScore] = await Promise.all([
+        compileLaTeX(latex),
+        scoreResume(latex),
+      ]);
       setOriginalPdf(originalPdfBase64);
+      setOriginalScore(origScore);
 
       // Tailor the LaTeX
       const tailorResponse = await fetch('/api/tailor-latex', {
@@ -56,9 +86,13 @@ export default function TailorPage() {
       const tailorData = await tailorResponse.json();
       setTailoredLatex(tailorData.tailoredLatex);
 
-      // Compile tailored LaTeX
-      const tailoredPdfBase64 = await compileLaTeX(tailorData.tailoredLatex);
+      // Compile tailored LaTeX and score it in parallel
+      const [tailoredPdfBase64, tailScore] = await Promise.all([
+        compileLaTeX(tailorData.tailoredLatex),
+        scoreResume(tailorData.tailoredLatex),
+      ]);
       setTailoredPdf(tailoredPdfBase64);
+      setTailoredScore(tailScore);
     } catch (err) {
       console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -115,6 +149,73 @@ export default function TailorPage() {
     }
   };
 
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 75) return 'text-green-500';
+    if (score >= 60) return 'text-yellow-500';
+    if (score >= 40) return 'text-orange-500';
+    return 'text-red-500';
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 90) return 'bg-green-100 border-green-300';
+    if (score >= 75) return 'bg-green-50 border-green-200';
+    if (score >= 60) return 'bg-yellow-50 border-yellow-200';
+    if (score >= 40) return 'bg-orange-50 border-orange-200';
+    return 'bg-red-50 border-red-200';
+  };
+
+  const ScoreCard = ({ score, label }: { score: ScoreResult; label: string }) => (
+    <div className={`p-4 rounded-lg border ${getScoreBgColor(score.score)}`}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-gray-800">{label}</h3>
+        <span className={`text-3xl font-bold ${getScoreColor(score.score)}`}>
+          {score.score}
+        </span>
+      </div>
+      <p className="text-sm text-gray-600 mb-3">{score.summary}</p>
+
+      {score.strengths.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-medium text-green-700 mb-1">Strengths:</p>
+          <ul className="text-xs text-gray-600 space-y-0.5">
+            {score.strengths.slice(0, 3).map((s, i) => (
+              <li key={i} className="flex items-start">
+                <span className="text-green-500 mr-1">+</span> {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {score.gaps.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-medium text-red-700 mb-1">Gaps:</p>
+          <ul className="text-xs text-gray-600 space-y-0.5">
+            {score.gaps.slice(0, 3).map((g, i) => (
+              <li key={i} className="flex items-start">
+                <span className="text-red-500 mr-1">-</span> {g}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {score.suggestions.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-blue-700 mb-1">Suggestions:</p>
+          <ul className="text-xs text-gray-600 space-y-0.5">
+            {score.suggestions.slice(0, 3).map((s, i) => (
+              <li key={i} className="flex items-start">
+                <span className="text-blue-500 mr-1">→</span> {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <main className="min-h-screen p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Tailor Resume</h1>
@@ -168,12 +269,34 @@ export default function TailorPage() {
         disabled={loading || !latex || !jobDescription}
         className="w-full py-3 mb-8 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Tailoring...' : 'Tailor Resume'}
+        {loading ? 'Tailoring & Scoring...' : 'Tailor Resume'}
       </button>
 
       {error && (
         <div className="mb-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Score Comparison */}
+      {(originalScore || tailoredScore) && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Match Score Comparison</h2>
+          <div className="grid grid-cols-2 gap-8">
+            {originalScore && (
+              <ScoreCard score={originalScore} label="Original Resume" />
+            )}
+            {tailoredScore && (
+              <div className="relative">
+                {originalScore && tailoredScore.score > originalScore.score && (
+                  <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    +{tailoredScore.score - originalScore.score} pts
+                  </div>
+                )}
+                <ScoreCard score={tailoredScore} label="Tailored Resume" />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
