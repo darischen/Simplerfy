@@ -1,184 +1,128 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { getProfile, getApplications, JobApplication } from '@/lib/storage';
 
-export default function Home() {
-  const [latex, setLatex] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
-  const [originalPdf, setOriginalPdf] = useState<string | null>(null);
-  const [tailoredPdf, setTailoredPdf] = useState<string | null>(null);
-  const [tailoredLatex, setTailoredLatex] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function Dashboard() {
+  const [hasProfile, setHasProfile] = useState(false);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    applied: 0,
+    interviewing: 0,
+    offers: 0,
+  });
 
-  const compileLaTeX = async (latexContent: string): Promise<string> => {
-    const response = await fetch('/api/compile-latex', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latex: latexContent }),
+  useEffect(() => {
+    const profile = getProfile();
+    setHasProfile(!!profile?.basics.firstName);
+
+    const apps = getApplications();
+    setApplications(apps.slice(0, 5));
+    setStats({
+      total: apps.length,
+      applied: apps.filter((a) => a.status === 'applied').length,
+      interviewing: apps.filter((a) => ['screening', 'interviewing'].includes(a.status)).length,
+      offers: apps.filter((a) => a.status === 'offer').length,
     });
-
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Compilation failed');
-    }
-
-    const data = await response.json();
-    return data.pdf;
-  };
-
-  const handleTailor = async () => {
-    if (!latex || !jobDescription) return;
-
-    setLoading(true);
-    setError(null);
-    setOriginalPdf(null);
-    setTailoredPdf(null);
-
-    try {
-      // Compile original LaTeX
-      const originalPdfBase64 = await compileLaTeX(latex);
-      setOriginalPdf(originalPdfBase64);
-
-      // Tailor the LaTeX
-      const tailorResponse = await fetch('/api/tailor-latex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex, jobDescription }),
-      });
-
-      if (!tailorResponse.ok) {
-        throw new Error('Failed to tailor resume');
-      }
-
-      const tailorData = await tailorResponse.json();
-      setTailoredLatex(tailorData.tailoredLatex);
-
-      // Compile tailored LaTeX
-      const tailoredPdfBase64 = await compileLaTeX(tailorData.tailoredLatex);
-      setTailoredPdf(tailoredPdfBase64);
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-
-    setLoading(false);
-  };
-
-  const copyTailoredLatex = () => {
-    if (tailoredLatex) {
-      navigator.clipboard.writeText(tailoredLatex);
-    }
-  };
-
-  const downloadTailoredPdf = () => {
-    if (tailoredPdf) {
-      const link = document.createElement('a');
-      link.href = `data:application/pdf;base64,${tailoredPdf}`;
-      link.download = 'tailored-resume.pdf';
-      link.click();
-    }
-  };
+  }, []);
 
   return (
-    <main className="min-h-screen p-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Simplerfy</h1>
+    <main className="max-w-7xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
 
-      {/* Input Section */}
-      <div className="grid grid-cols-2 gap-8 mb-8">
-        {/* LaTeX Input */}
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">LaTeX Resume</h2>
-          <textarea
-            className="w-full h-64 p-4 border rounded-lg font-mono text-sm text-black bg-white"
-            placeholder="Paste your LaTeX resume code here..."
-            value={latex}
-            onChange={(e) => setLatex(e.target.value)}
-          />
-        </div>
-
-        {/* Job Description Input */}
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Job Description</h2>
-          <textarea
-            className="w-full h-64 p-4 border rounded-lg font-mono text-sm text-black bg-white"
-            placeholder="Paste the job description here..."
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Tailor Button */}
-      <button
-        onClick={handleTailor}
-        disabled={loading || !latex || !jobDescription}
-        className="w-full py-3 mb-8 bg-blue-400 text-white rounded-lg cursor-pointer hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Tailoring...' : 'Tailor Resume'}
-      </button>
-
-      {error && (
-        <div className="mb-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          {error}
+      {!hasProfile && (
+        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800">
+            Complete your profile to get started.{' '}
+            <Link href="/profile" className="font-medium underline">
+              Set up profile →
+            </Link>
+          </p>
         </div>
       )}
 
-      {/* PDF Comparison Section */}
-      <div className="grid grid-cols-2 gap-8">
-        {/* Original PDF */}
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Original Resume</h2>
-          <div className="h-[800px] border rounded-lg overflow-hidden bg-gray-100">
-            {originalPdf ? (
-              <iframe
-                src={`data:application/pdf;base64,${originalPdf}`}
-                className="w-full h-full"
-                title="Original Resume PDF"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                Original PDF will appear here...
-              </div>
-            )}
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg border">
+          <p className="text-sm text-gray-500">Total Applications</p>
+          <p className="text-3xl font-bold">{stats.total}</p>
         </div>
+        <div className="bg-white p-6 rounded-lg border">
+          <p className="text-sm text-gray-500">Applied</p>
+          <p className="text-3xl font-bold text-blue-600">{stats.applied}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg border">
+          <p className="text-sm text-gray-500">Interviewing</p>
+          <p className="text-3xl font-bold text-purple-600">{stats.interviewing}</p>
+        </div>
+        <div className="bg-white p-6 rounded-lg border">
+          <p className="text-sm text-gray-500">Offers</p>
+          <p className="text-3xl font-bold text-green-600">{stats.offers}</p>
+        </div>
+      </div>
 
-        {/* Tailored PDF */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Tailored Resume</h2>
-            {tailoredLatex && (
-              <div className="flex gap-2">
-                <button
-                  onClick={copyTailoredLatex}
-                  className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
-                >
-                  Copy LaTeX
-                </button>
-                <button
-                  onClick={downloadTailoredPdf}
-                  className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
-                >
-                  Download PDF
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="h-[800px] border rounded-lg overflow-hidden bg-gray-100">
-            {tailoredPdf ? (
-              <iframe
-                src={`data:application/pdf;base64,${tailoredPdf}`}
-                className="w-full h-full"
-                title="Tailored Resume PDF"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                Tailored PDF will appear here...
-              </div>
-            )}
-          </div>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <Link
+          href="/tailor"
+          className="bg-blue-600 text-white p-6 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <h3 className="font-semibold text-lg">Tailor Resume</h3>
+          <p className="text-blue-100 text-sm mt-1">Optimize your resume for a job</p>
+        </Link>
+        <Link
+          href="/tracker"
+          className="bg-white border p-6 rounded-lg hover:border-gray-300 transition-colors"
+        >
+          <h3 className="font-semibold text-lg text-gray-900">Track Application</h3>
+          <p className="text-gray-500 text-sm mt-1">Log a new job application</p>
+        </Link>
+        <Link
+          href="/answers"
+          className="bg-white border p-6 rounded-lg hover:border-gray-300 transition-colors"
+        >
+          <h3 className="font-semibold text-lg text-gray-900">Generate Answers</h3>
+          <p className="text-gray-500 text-sm mt-1">AI-powered application answers</p>
+        </Link>
+      </div>
+
+      {/* Recent Applications */}
+      <div className="bg-white border rounded-lg">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="font-semibold">Recent Applications</h2>
+          <Link href="/tracker" className="text-sm text-blue-600 hover:underline">
+            View all →
+          </Link>
         </div>
+        {applications.length === 0 ? (
+          <p className="p-4 text-gray-500">No applications yet. Start by tailoring your resume!</p>
+        ) : (
+          <div className="divide-y">
+            {applications.map((app) => (
+              <div key={app.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium">{app.title}</p>
+                  <p className="text-sm text-gray-500">{app.company}</p>
+                </div>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${
+                    app.status === 'offer'
+                      ? 'bg-green-100 text-green-700'
+                      : app.status === 'rejected'
+                      ? 'bg-red-100 text-red-700'
+                      : app.status === 'interviewing'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {app.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
