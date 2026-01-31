@@ -141,7 +141,7 @@ export default function TrackerPage() {
       {/* Filters */}
       <div className="flex gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-white mb-1">
             Filter by Status
           </label>
           <select
@@ -158,7 +158,7 @@ export default function TrackerPage() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-white mb-1">
             Sort by
           </label>
           <select
@@ -172,7 +172,7 @@ export default function TrackerPage() {
           </select>
         </div>
         <div className="flex items-end">
-          <p className="text-sm text-gray-500 pb-2">
+          <p className="text-sm text-white pb-2">
             {filteredApps.length} application{filteredApps.length !== 1 ? 's' : ''}
           </p>
         </div>

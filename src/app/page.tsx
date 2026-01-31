@@ -52,7 +52,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg border">
           <p className="text-sm text-gray-500">Total Applications</p>
-          <p className="text-3xl font-bold">{stats.total}</p>
+          <p className="text-3xl font-bold text-black">{stats.total}</p>
         </div>
         <div className="bg-white p-6 rounded-lg border">
           <p className="text-sm text-gray-500">Applied</p>
@@ -96,7 +96,7 @@ export default function Dashboard() {
       {/* Recent Applications */}
       <div className="bg-white border rounded-lg">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold">Recent Applications</h2>
+          <h2 className="font-semibold text-black">Recent Applications</h2>
           <Link href="/tracker" className="text-sm text-blue-600 hover:underline">
             View all →
           </Link>
@@ -108,8 +108,8 @@ export default function Dashboard() {
             {applications.map((app) => (
               <div key={app.id} className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{app.title}</p>
-                  <p className="text-sm text-gray-500">{app.company}</p>
+                  <p className="font-medium text-gray-900">{app.title}</p>
+                  <p className="text-sm text-gray-700">{app.company}</p>
                 </div>
                 <span
                   className={`px-2 py-1 text-xs rounded-full ${
@@ -122,7 +122,7 @@ export default function Dashboard() {
                       : 'bg-gray-100 text-gray-700'
                   }`}
                 >
-                  {app.status}
+                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                 </span>
               </div>
             ))}

@@ -288,7 +288,7 @@ export default function ProfilePage() {
 
       {/* Basic Information */}
       <section className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-black">Basic Information</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -388,7 +388,7 @@ export default function ProfilePage() {
       {/* Education */}
       <section className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Education</h2>
+          <h2 className="text-xl font-semibold text-black">Education</h2>
           <button
             onClick={addEducation}
             className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
@@ -504,7 +504,7 @@ export default function ProfilePage() {
       {/* Experience */}
       <section className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Experience</h2>
+          <h2 className="text-xl font-semibold text-black">Experience</h2>
           <button
             onClick={addExperience}
             className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
@@ -651,7 +651,7 @@ export default function ProfilePage() {
       {/* Projects */}
       <section className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Projects</h2>
+          <h2 className="text-xl font-semibold text-black">Projects</h2>
           <button
             onClick={addProject}
             className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
@@ -773,7 +773,7 @@ export default function ProfilePage() {
       {/* Skills */}
       <section className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Skills</h2>
+          <h2 className="text-xl font-semibold text-black">Skills</h2>
           <button
             onClick={addSkillCategory}
             className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
