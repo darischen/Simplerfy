@@ -15,7 +15,7 @@ interface ParsedResume {
     lastName: string;
     email: string;
     phone: string;
-    location: string;
+    location: string; // Resume parser returns combined location, we'll parse it
     linkedin?: string;
     github?: string;
     website?: string;
@@ -76,6 +76,25 @@ function getInitialProfile(): UserProfile {
       ethnicity: '',
     };
   }
+  // Migrate old location field to new address fields
+  const oldProfile = profile as UserProfile & { basics: { location?: string } };
+  if (oldProfile.basics.location && !profile.basics.city) {
+    // Try to parse "City, State" format
+    const parts = oldProfile.basics.location.split(',').map((s) => s.trim());
+    if (parts.length >= 2) {
+      profile.basics.city = parts[0];
+      profile.basics.state = parts[1];
+    } else if (parts.length === 1) {
+      profile.basics.city = parts[0];
+    }
+    delete oldProfile.basics.location;
+  }
+  // Ensure new address fields exist
+  if (!profile.basics.streetAddress) profile.basics.streetAddress = '';
+  if (!profile.basics.city) profile.basics.city = '';
+  if (!profile.basics.state) profile.basics.state = '';
+  if (!profile.basics.zipCode) profile.basics.zipCode = '';
+  if (!profile.basics.country) profile.basics.country = '';
   return profile;
 }
 
@@ -249,8 +268,15 @@ export default function ProfilePage() {
     if (!newBasics.phone && parsed.basics.phone) {
       newBasics.phone = parsed.basics.phone;
     }
-    if (!newBasics.location && parsed.basics.location) {
-      newBasics.location = parsed.basics.location;
+    // Parse location from resume into address fields if city is empty
+    if (!newBasics.city && parsed.basics.location) {
+      const parts = parsed.basics.location.split(',').map((s) => s.trim());
+      if (parts.length >= 2) {
+        newBasics.city = parts[0];
+        newBasics.state = parts[1];
+      } else if (parts.length === 1) {
+        newBasics.city = parts[0];
+      }
     }
     if (!newBasics.linkedin && parsed.basics.linkedin) {
       newBasics.linkedin = parsed.basics.linkedin;
@@ -800,13 +826,73 @@ export default function ProfilePage() {
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location
+              Street Address
             </label>
             <input
               type="text"
-              value={profile.basics.location}
-              onChange={(e) => updateBasics('location', e.target.value)}
-              placeholder="City, State"
+              value={profile.basics.streetAddress}
+              onChange={(e) => updateBasics('streetAddress', e.target.value)}
+              placeholder="123 Main St"
+              className="w-full p-2 border rounded-lg text-black bg-white"
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Street Address Line 2 (optional)
+            </label>
+            <input
+              type="text"
+              value={profile.basics.streetAddress2 || ''}
+              onChange={(e) => updateBasics('streetAddress2', e.target.value)}
+              placeholder="Apt, Suite, Unit, etc."
+              className="w-full p-2 border rounded-lg text-black bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City
+            </label>
+            <input
+              type="text"
+              value={profile.basics.city}
+              onChange={(e) => updateBasics('city', e.target.value)}
+              placeholder="San Diego"
+              className="w-full p-2 border rounded-lg text-black bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              State / Province
+            </label>
+            <input
+              type="text"
+              value={profile.basics.state}
+              onChange={(e) => updateBasics('state', e.target.value)}
+              placeholder="CA"
+              className="w-full p-2 border rounded-lg text-black bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ZIP / Postal Code
+            </label>
+            <input
+              type="text"
+              value={profile.basics.zipCode}
+              onChange={(e) => updateBasics('zipCode', e.target.value)}
+              placeholder="92101"
+              className="w-full p-2 border rounded-lg text-black bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Country
+            </label>
+            <input
+              type="text"
+              value={profile.basics.country}
+              onChange={(e) => updateBasics('country', e.target.value)}
+              placeholder="United States"
               className="w-full p-2 border rounded-lg text-black bg-white"
             />
           </div>

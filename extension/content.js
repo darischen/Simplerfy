@@ -8,18 +8,27 @@ const FIELD_PATTERNS = {
   fullName: ['full_name', 'fullname', 'name', 'your_name', 'yourname', 'applicant_name', 'candidate_name'],
   email: ['email', 'e-mail', 'email_address', 'emailaddress', 'e_mail'],
   phone: ['phone', 'telephone', 'mobile', 'cell', 'phone_number', 'phonenumber', 'tel', 'contact_number'],
+  phoneExtension: ['phone_ext', 'phoneext', 'extension', 'ext', 'phone_extension'],
   linkedin: ['linkedin', 'linked_in', 'linkedin_url', 'linkedinurl', 'linkedin_profile'],
   github: ['github', 'git_hub', 'github_url', 'githuburl', 'github_profile'],
   website: ['website', 'portfolio', 'personal_site', 'personalsite', 'url', 'personal_website', 'homepage'],
-  location: ['location', 'city', 'address', 'current_location', 'currentlocation'],
+  // Address fields - order matters, more specific patterns first
+  city: ['city', 'town', 'locality', 'city_name', 'cityname'],
+  state: ['state', 'province', 'administrative_area', 'state_province', 'state_region', 'stateprovince', 'addressstate', 'address_state', 'addressregion', 'address_region', 'region', 'countryregion', 'country_region', 'stateprovincecode', 'state_code', 'statecode'],
+  zipCode: ['zip', 'zipcode', 'zip_code', 'postal', 'postal_code', 'postalcode'],
+  country: ['country', 'nation', 'country_name'],
+  streetAddress2: ['address_line_2', 'address2', 'addressline2', 'apt', 'suite', 'unit', 'apartment', 'address_2', 'line2', 'line_2'],
+  streetAddress: ['street_address', 'streetaddress', 'street', 'address_line_1', 'address1', 'addressline1', 'address_line1', 'line1', 'line_1', 'address_1'],
+  // Experience
   company: ['company', 'employer', 'organization', 'current_company', 'currentcompany', 'current_employer'],
   title: ['title', 'position', 'job_title', 'jobtitle', 'current_title', 'currenttitle', 'role'],
+  // Education
   school: ['school', 'university', 'college', 'institution', 'education', 'alma_mater'],
   degree: ['degree', 'diploma', 'qualification'],
   major: ['major', 'field_of_study', 'fieldofstudy', 'concentration', 'specialization', 'field'],
   gpa: ['gpa', 'grade', 'grade_point', 'gradepoint', 'cgpa'],
   // Application preference patterns
-  jobSource: ['hear_about', 'how_did_you_hear', 'source', 'referral_source', 'job_source', 'found_us', 'hear_about_us', 'how_heard'],
+  jobSource: ['hear_about', 'how_did_you_hear', 'source', 'referral_source', 'job_source', 'found_us', 'hear_about_us', 'how_heard', 'where_did_you', 'how_did_you_find', 'learn_about', 'discover', 'referred', 'recruiting_source', 'howdidyouhear', 'sourceofhire', 'job_board', 'jobboard'],
   authorized: ['authorized', 'authorised', 'legally_authorized', 'work_authorization', 'eligible_to_work', 'legally_eligible'],
   sponsorship: ['sponsor', 'visa', 'sponsorship', 'require_sponsor', 'need_visa', 'immigration'],
   relocate: ['relocate', 'relocation', 'willing_to_relocate', 'open_to_relocation'],
@@ -29,7 +38,11 @@ const FIELD_PATTERNS = {
   gender: ['gender', 'sex'],
   ethnicity: ['ethnicity', 'race', 'ethnic', 'racial'],
   veteran: ['veteran', 'military', 'protected_veteran'],
-  disability: ['disability', 'disabled', 'handicap']
+  disability: ['disability', 'disabled', 'handicap'],
+  citizenship: ['citizenship', 'citizen', 'nationality'],
+  // Questions that should always be "No"
+  previouslyEmployed: ['previously_employed', 'worked_here_before', 'former_employee', 'worked_for_this_company', 'employed_by_this_company', 'worked_at_this_company', 'previously_worked'],
+  governmentEmployee: ['government', 'federal_employee', 'us_government', 'federal_government', 'government_employee', 'employed_by_government', 'work_for_government']
 };
 
 // Listen for messages from popup
@@ -72,6 +85,11 @@ function fillForm(profile, selectedResumeId) {
       const fieldType = detectFieldType(input);
       if (!fieldType) return;
 
+      // Debug logging for address fields
+      if (['streetAddress', 'city', 'state', 'zipCode', 'country'].includes(fieldType)) {
+        console.log(`Simplerfy: Detected ${fieldType} field:`, input.name || input.id, input.tagName);
+      }
+
       let value = null;
 
       switch (fieldType) {
@@ -102,8 +120,25 @@ function fillForm(profile, selectedResumeId) {
         case 'website':
           value = basics.website;
           break;
-        case 'location':
-          value = basics.location;
+        // Address fields
+        case 'streetAddress':
+          value = basics.streetAddress;
+          break;
+        case 'streetAddress2':
+          value = basics.streetAddress2;
+          break;
+        case 'city':
+          value = basics.city;
+          break;
+        case 'state':
+          value = basics.state;
+          console.log('Simplerfy: State value from profile:', value);
+          break;
+        case 'zipCode':
+          value = basics.zipCode;
+          break;
+        case 'country':
+          value = basics.country;
           break;
         // Experience
         case 'company':
@@ -159,6 +194,14 @@ function fillForm(profile, selectedResumeId) {
         case 'disability':
           value = applicationPreferences?.disabilityStatus;
           break;
+        case 'citizenship':
+          value = applicationPreferences?.citizenship;
+          break;
+        // Questions that should always be "No"
+        case 'previouslyEmployed':
+        case 'governmentEmployee':
+          value = 'No';
+          break;
       }
 
       // Handle boolean/yes-no fields
@@ -192,6 +235,18 @@ function fillForm(profile, selectedResumeId) {
         resumeUploadDetected = true;
         filledFields++;
       }
+    }
+
+    // Special pass for job source fields (Workday and other custom forms)
+    const jobSourceFilled = handleJobSourceFields();
+    if (jobSourceFilled) {
+      filledFields++;
+    }
+
+    // Special pass for state fields that might have been missed
+    const stateFilled = handleStateFields(basics.state);
+    if (stateFilled) {
+      filledFields++;
     }
 
     return { success: true, filledFields, resumeUploadDetected };
@@ -242,12 +297,16 @@ function detectFieldType(element) {
     return 'email';
   }
 
-  // Check for phone type
+  // Check for phone type (but not phone extension)
   if (element.type === 'tel') {
+    // Skip phone extension fields
+    if (searchText.includes('ext') || searchText.includes('extension')) {
+      return null;
+    }
     return 'phone';
   }
 
-  // Check autocomplete attribute
+  // Check autocomplete attribute for address fields
   if (autocomplete) {
     if (autocomplete === 'given-name') return 'firstName';
     if (autocomplete === 'family-name') return 'lastName';
@@ -256,7 +315,12 @@ function detectFieldType(element) {
     if (autocomplete === 'tel') return 'phone';
     if (autocomplete === 'url') return 'website';
     if (autocomplete === 'organization') return 'company';
-    if (autocomplete === 'address-level2') return 'location';
+    if (autocomplete === 'street-address' || autocomplete === 'address-line1') return 'streetAddress';
+    if (autocomplete === 'address-line2') return 'streetAddress2';
+    if (autocomplete === 'address-level2') return 'city';
+    if (autocomplete === 'address-level1') return 'state';
+    if (autocomplete === 'postal-code') return 'zipCode';
+    if (autocomplete === 'country' || autocomplete === 'country-name') return 'country';
   }
 
   // Check patterns for each field type
@@ -270,12 +334,79 @@ function detectFieldType(element) {
             continue;
           }
         }
+        // Don't confuse street address with streetAddress2
+        if (fieldType === 'streetAddress') {
+          if (searchText.includes('line_2') || searchText.includes('line2') ||
+              searchText.includes('address2') || searchText.includes('apt') ||
+              searchText.includes('suite') || searchText.includes('unit')) {
+            continue;
+          }
+        }
+        // Don't fill phone extension fields
+        if (fieldType === 'phone') {
+          if (searchText.includes('ext') || searchText.includes('extension')) {
+            continue;
+          }
+        }
+        // Skip phoneExtension - we don't want to fill it
+        if (fieldType === 'phoneExtension') {
+          return null;
+        }
+        // Don't match streetAddress if this is actually a city, state, zip, or country field
+        if (fieldType === 'streetAddress') {
+          if (searchText.includes('city') || searchText.includes('town') ||
+              searchText.includes('state') || searchText.includes('province') ||
+              searchText.includes('zip') || searchText.includes('postal') ||
+              searchText.includes('country') || searchText.includes('region')) {
+            continue;
+          }
+        }
+        // For state field - skip only if it clearly says "united states" or "statement"
+        if (fieldType === 'state') {
+          const immediateContext = `${name} ${id} ${placeholder} ${ariaLabel}`;
+          // Only skip if the immediate field context (not label) contains these
+          if (immediateContext.includes('statement') || immediateContext.includes('stated')) {
+            continue;
+          }
+          // Skip if it's clearly a country field asking for "United States"
+          if (immediateContext.includes('unitedstates') || immediateContext.includes('united_states')) {
+            continue;
+          }
+        }
+        // Don't match country if immediate context says state/province
+        if (fieldType === 'country') {
+          const immediateContext = `${name} ${id} ${placeholder} ${ariaLabel}`;
+          if (immediateContext.includes('state') || immediateContext.includes('province')) {
+            continue;
+          }
+        }
         return fieldType;
       }
     }
   }
 
   return null;
+}
+
+// Get label text for an element
+function getLabelText(element) {
+  let labelText = '';
+  if (element.id) {
+    const label = document.querySelector(`label[for="${element.id}"]`);
+    if (label) labelText = label.textContent.toLowerCase();
+  }
+  const parentLabel = element.closest('label');
+  if (parentLabel) labelText += ' ' + parentLabel.textContent.toLowerCase();
+
+  // Also check parent container for context
+  const parent = element.closest('div, fieldset, section, li');
+  if (parent) {
+    const parentLabelEl = parent.querySelector('label, legend, h3, h4, .label, span');
+    if (parentLabelEl) {
+      labelText += ' ' + parentLabelEl.textContent.toLowerCase();
+    }
+  }
+  return labelText;
 }
 
 // Fill an input element and trigger events
@@ -293,9 +424,96 @@ function fillInput(element, value, fieldType, prefs) {
   }
 }
 
-// Fill select elements
+// US State abbreviations to full names mapping
+const STATE_MAP = {
+  'al': 'alabama', 'ak': 'alaska', 'az': 'arizona', 'ar': 'arkansas', 'ca': 'california',
+  'co': 'colorado', 'ct': 'connecticut', 'de': 'delaware', 'fl': 'florida', 'ga': 'georgia',
+  'hi': 'hawaii', 'id': 'idaho', 'il': 'illinois', 'in': 'indiana', 'ia': 'iowa',
+  'ks': 'kansas', 'ky': 'kentucky', 'la': 'louisiana', 'me': 'maine', 'md': 'maryland',
+  'ma': 'massachusetts', 'mi': 'michigan', 'mn': 'minnesota', 'ms': 'mississippi', 'mo': 'missouri',
+  'mt': 'montana', 'ne': 'nebraska', 'nv': 'nevada', 'nh': 'new hampshire', 'nj': 'new jersey',
+  'nm': 'new mexico', 'ny': 'new york', 'nc': 'north carolina', 'nd': 'north dakota', 'oh': 'ohio',
+  'ok': 'oklahoma', 'or': 'oregon', 'pa': 'pennsylvania', 'ri': 'rhode island', 'sc': 'south carolina',
+  'sd': 'south dakota', 'tn': 'tennessee', 'tx': 'texas', 'ut': 'utah', 'vt': 'vermont',
+  'va': 'virginia', 'wa': 'washington', 'wv': 'west virginia', 'wi': 'wisconsin', 'wy': 'wyoming',
+  'dc': 'district of columbia'
+};
+
+// Reverse map: full name to abbreviation
+const STATE_REVERSE_MAP = Object.fromEntries(Object.entries(STATE_MAP).map(([k, v]) => [v, k]));
+
+// Fill select elements (dropdowns)
 function fillSelect(select, value, fieldType) {
-  const valueLower = (value || '').toLowerCase();
+  const valueLower = (value || '').toLowerCase().trim();
+
+  // For state fields - handle abbreviations and full names
+  if (fieldType === 'state' && valueLower) {
+    // Get both abbreviation and full name
+    const stateAbbrev = STATE_REVERSE_MAP[valueLower] || valueLower;
+    const stateFull = STATE_MAP[valueLower] || valueLower;
+    console.log('Simplerfy: Filling state dropdown, looking for:', valueLower, stateAbbrev, stateFull);
+    console.log('Simplerfy: Available options:', Array.from(select.options).map(o => o.text + '=' + o.value));
+
+    for (const option of select.options) {
+      const optionText = (option.text || '').toLowerCase().trim();
+      const optionValue = (option.value || '').toLowerCase().trim();
+
+      // Match abbreviation (exact or at start like "CA" or "CA -")
+      if (optionValue === stateAbbrev || optionText === stateAbbrev ||
+          optionValue.startsWith(stateAbbrev + ' ') || optionText.startsWith(stateAbbrev + ' ') ||
+          optionValue.startsWith(stateAbbrev + '-') || optionText.startsWith(stateAbbrev + '-')) {
+        select.value = option.value;
+        triggerInputEvents(select);
+        return true;
+      }
+
+      // Match full name
+      if (optionValue === stateFull || optionText === stateFull ||
+          optionValue.includes(stateFull) || optionText.includes(stateFull)) {
+        select.value = option.value;
+        triggerInputEvents(select);
+        return true;
+      }
+
+      // Match the original value as-is
+      if (optionValue === valueLower || optionText === valueLower ||
+          optionValue.includes(valueLower) || optionText.includes(valueLower)) {
+        select.value = option.value;
+        triggerInputEvents(select);
+        return true;
+      }
+    }
+  }
+
+  // For job source - always try to select option containing "linkedin" (case insensitive)
+  if (fieldType === 'jobSource') {
+    for (const option of select.options) {
+      const optionText = (option.text || '').toLowerCase();
+      const optionValue = (option.value || '').toLowerCase();
+      const optionLabel = (option.label || '').toLowerCase();
+      // Check if any part contains "linkedin"
+      if (optionText.indexOf('linkedin') !== -1 ||
+          optionValue.indexOf('linkedin') !== -1 ||
+          optionLabel.indexOf('linkedin') !== -1) {
+        select.value = option.value;
+        triggerInputEvents(select);
+        return true;
+      }
+    }
+  }
+
+  // For questions that should always be "No"
+  if (fieldType === 'previouslyEmployed' || fieldType === 'governmentEmployee') {
+    for (const option of select.options) {
+      const optionText = option.text.toLowerCase();
+      const optionValue = option.value.toLowerCase();
+      if (optionText.includes('no') || optionValue === 'no' || optionValue === 'false' || optionValue === '0') {
+        select.value = option.value;
+        triggerInputEvents(select);
+        return true;
+      }
+    }
+  }
 
   // For yes/no type fields
   if (['authorized', 'sponsorship', 'relocate', 'over18'].includes(fieldType)) {
@@ -309,18 +527,6 @@ function fillSelect(select, value, fieldType) {
         return true;
       }
       if (!isYes && (optionText.includes('no') || optionValue === 'no' || optionValue === 'false' || optionValue === '0')) {
-        select.value = option.value;
-        triggerInputEvents(select);
-        return true;
-      }
-    }
-  }
-
-  // For job source - always try LinkedIn first
-  if (fieldType === 'jobSource') {
-    for (const option of select.options) {
-      const optionText = option.text.toLowerCase();
-      if (optionText.includes('linkedin')) {
         select.value = option.value;
         triggerInputEvents(select);
         return true;
@@ -346,39 +552,36 @@ function fillSelect(select, value, fieldType) {
 
 // Fill checkbox
 function fillCheckbox(checkbox, value, fieldType, prefs) {
-  const shouldCheck = value === 'Yes' || value === true || value === 'true';
-
-  // Get label text for context
-  let labelText = '';
-  if (checkbox.id) {
-    const label = document.querySelector(`label[for="${checkbox.id}"]`);
-    if (label) labelText = label.textContent.toLowerCase();
+  // Questions that should always be "No" (unchecked)
+  if (fieldType === 'previouslyEmployed' || fieldType === 'governmentEmployee') {
+    checkbox.checked = false;
+    triggerInputEvents(checkbox);
+    return true;
   }
-  const parentLabel = checkbox.closest('label');
-  if (parentLabel) labelText += ' ' + parentLabel.textContent.toLowerCase();
 
   // Handle specific field types
-  if (fieldType === 'authorized' && labelText.includes('authorized')) {
+  if (fieldType === 'authorized') {
     checkbox.checked = prefs?.isAuthorizedToWork ?? true;
     triggerInputEvents(checkbox);
     return true;
   }
-  if (fieldType === 'sponsorship' && (labelText.includes('sponsor') || labelText.includes('visa'))) {
+  if (fieldType === 'sponsorship') {
     checkbox.checked = prefs?.requiresSponsorship ?? false;
     triggerInputEvents(checkbox);
     return true;
   }
-  if (fieldType === 'relocate' && labelText.includes('relocat')) {
+  if (fieldType === 'relocate') {
     checkbox.checked = prefs?.willingToRelocate ?? false;
     triggerInputEvents(checkbox);
     return true;
   }
-  if (fieldType === 'over18' && (labelText.includes('18') || labelText.includes('age'))) {
+  if (fieldType === 'over18') {
     checkbox.checked = prefs?.isOver18 ?? true;
     triggerInputEvents(checkbox);
     return true;
   }
 
+  const shouldCheck = value === 'Yes' || value === true || value === 'true';
   checkbox.checked = shouldCheck;
   triggerInputEvents(checkbox);
   return true;
@@ -386,28 +589,390 @@ function fillCheckbox(checkbox, value, fieldType, prefs) {
 
 // Fill radio button
 function fillRadio(radio, value, fieldType) {
-  const radioValue = radio.value.toLowerCase();
+  const radioValue = (radio.value || '').toLowerCase();
   const valueLower = (value || '').toLowerCase();
+  const labelText = getLabelText(radio);
 
-  // For yes/no fields
-  if (['authorized', 'sponsorship', 'relocate', 'over18'].includes(fieldType)) {
-    const isYes = valueLower === 'yes';
-    if ((isYes && (radioValue === 'yes' || radioValue === 'true' || radioValue === '1')) ||
-        (!isYes && (radioValue === 'no' || radioValue === 'false' || radioValue === '0'))) {
+  // For job source - always select option containing "linkedin" (case insensitive)
+  if (fieldType === 'jobSource') {
+    if (radioValue.indexOf('linkedin') !== -1 || labelText.indexOf('linkedin') !== -1) {
       radio.checked = true;
       triggerInputEvents(radio);
       return true;
     }
+    return false;
+  }
+
+  // Questions that should always be "No"
+  if (fieldType === 'previouslyEmployed' || fieldType === 'governmentEmployee') {
+    if (radioValue === 'no' || radioValue === 'false' || radioValue === '0' ||
+        labelText.includes('no') && !labelText.includes('yes')) {
+      radio.checked = true;
+      triggerInputEvents(radio);
+      return true;
+    }
+    return false;
+  }
+
+  // For yes/no fields
+  if (['authorized', 'sponsorship', 'relocate', 'over18'].includes(fieldType)) {
+    const isYes = valueLower === 'yes';
+    const radioLabelIsYes = labelText.includes('yes') && !labelText.includes('no');
+    const radioLabelIsNo = labelText.includes('no') && !labelText.includes('yes');
+
+    if (isYes && (radioValue === 'yes' || radioValue === 'true' || radioValue === '1' || radioLabelIsYes)) {
+      radio.checked = true;
+      triggerInputEvents(radio);
+      return true;
+    }
+    if (!isYes && (radioValue === 'no' || radioValue === 'false' || radioValue === '0' || radioLabelIsNo)) {
+      radio.checked = true;
+      triggerInputEvents(radio);
+      return true;
+    }
+    return false;
+  }
+
+  // For EEO fields like gender, ethnicity, veteran, disability
+  if (['gender', 'ethnicity', 'veteran', 'disability'].includes(fieldType)) {
+    if (radioValue.includes(valueLower) || valueLower.includes(radioValue) ||
+        labelText.includes(valueLower)) {
+      radio.checked = true;
+      triggerInputEvents(radio);
+      return true;
+    }
+    return false;
   }
 
   // General matching
-  if (radioValue.includes(valueLower) || valueLower.includes(radioValue)) {
+  if (radioValue.includes(valueLower) || valueLower.includes(radioValue) ||
+      labelText.includes(valueLower)) {
     radio.checked = true;
     triggerInputEvents(radio);
     return true;
   }
 
   return false;
+}
+
+// Special handler for state fields that might have been missed
+function handleStateFields(stateValue) {
+  if (!stateValue) return false;
+
+  const stateLower = stateValue.toLowerCase().trim();
+  const stateAbbrev = STATE_REVERSE_MAP[stateLower] || stateLower;
+  const stateFull = STATE_MAP[stateLower] || stateLower;
+
+  let filled = false;
+
+  // Look for select elements that might be state fields
+  document.querySelectorAll('select').forEach(select => {
+    if (select.dataset.simplerfyState || select.value) return; // Already filled or has value
+
+    const name = (select.name || '').toLowerCase();
+    const id = (select.id || '').toLowerCase();
+    const ariaLabel = (select.getAttribute('aria-label') || '').toLowerCase();
+
+    // Get nearby text for context
+    const parent = select.closest('div, fieldset, label');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+
+    // Check if this looks like a state field
+    const isStateField = name.includes('state') || name.includes('province') || name.includes('region') ||
+                         id.includes('state') || id.includes('province') || id.includes('region') ||
+                         ariaLabel.includes('state') || ariaLabel.includes('province') ||
+                         (nearbyText.includes('state') && !nearbyText.includes('united states'));
+
+    if (isStateField) {
+      // Try to find matching option
+      for (const option of select.options) {
+        const optionText = (option.text || '').toLowerCase().trim();
+        const optionValue = (option.value || '').toLowerCase().trim();
+
+        if (optionValue === stateAbbrev || optionText === stateAbbrev ||
+            optionValue === stateFull || optionText === stateFull ||
+            optionText.includes(stateFull) || optionValue.includes(stateFull) ||
+            optionText.startsWith(stateAbbrev + ' ') || optionText.startsWith(stateAbbrev + '-') ||
+            optionValue === stateLower || optionText === stateLower) {
+          select.value = option.value;
+          triggerInputEvents(select);
+          select.dataset.simplerfyState = 'true';
+          filled = true;
+          console.log('Simplerfy: Found state dropdown in special pass, selected:', option.text);
+          break;
+        }
+      }
+    }
+  });
+
+  // Look for text inputs that might be state fields
+  document.querySelectorAll('input[type="text"], input:not([type])').forEach(input => {
+    if (input.dataset.simplerfyState || input.value) return;
+
+    const name = (input.name || '').toLowerCase();
+    const id = (input.id || '').toLowerCase();
+    const ariaLabel = (input.getAttribute('aria-label') || '').toLowerCase();
+    const placeholder = (input.placeholder || '').toLowerCase();
+
+    const parent = input.closest('div, fieldset, label');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+
+    const isStateField = name.includes('state') || name.includes('province') || name.includes('region') ||
+                         id.includes('state') || id.includes('province') || id.includes('region') ||
+                         ariaLabel.includes('state') || ariaLabel.includes('province') ||
+                         placeholder.includes('state') || placeholder.includes('province') ||
+                         (nearbyText.includes('state') && !nearbyText.includes('united states'));
+
+    if (isStateField) {
+      input.value = stateValue;
+      triggerInputEvents(input);
+      input.dataset.simplerfyState = 'true';
+      filled = true;
+      console.log('Simplerfy: Found state text input in special pass, filled:', stateValue);
+    }
+  });
+
+  // Handle Workday custom dropdowns (they use buttons and listboxes instead of native select)
+  // Look for elements with state-related data-automation-id or aria-label
+  const stateKeywords = ['state', 'province', 'region'];
+  document.querySelectorAll('[data-automation-id*="state"], [data-automation-id*="State"], [data-automation-id*="province"], [data-automation-id*="Province"], [data-automation-id*="region"], [aria-label*="state"], [aria-label*="State"], [aria-label*="province"]').forEach(element => {
+    if (element.dataset.simplerfyState) return;
+
+    // Skip if this is a country field or "united states" context
+    const ariaLabel = (element.getAttribute('aria-label') || '').toLowerCase();
+    const automationId = (element.getAttribute('data-automation-id') || '').toLowerCase();
+    if (ariaLabel.includes('country') || ariaLabel.includes('united states') ||
+        automationId.includes('country')) {
+      return;
+    }
+
+    // Check if it's a Workday dropdown button or combobox
+    if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'listbox' ||
+        element.getAttribute('role') === 'combobox' || element.getAttribute('aria-haspopup')) {
+      console.log('Simplerfy: Found Workday state dropdown, clicking to open');
+      element.click();
+
+      // Wait for dropdown to open, then look for state option
+      setTimeout(() => {
+        selectStateFromDropdown(stateAbbrev, stateFull, stateLower, element);
+      }, 300);
+
+      element.dataset.simplerfyState = 'pending';
+      filled = true;
+    }
+  });
+
+  // Also check for custom combobox/listbox components by role
+  document.querySelectorAll('[role="combobox"], [role="listbox"], [aria-haspopup="listbox"]').forEach(element => {
+    if (element.dataset.simplerfyState) return;
+
+    const parent = element.closest('div, fieldset, section, li');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+    const ariaLabel = (element.getAttribute('aria-label') || '').toLowerCase();
+
+    // Check if this is a state field by looking at nearby text and labels
+    const isStateField = stateKeywords.some(keyword =>
+      (ariaLabel.includes(keyword) || nearbyText.includes(keyword)) &&
+      !nearbyText.includes('united states') && !ariaLabel.includes('country')
+    );
+
+    if (isStateField) {
+      console.log('Simplerfy: Found custom state combobox, clicking to open');
+      element.click();
+
+      setTimeout(() => {
+        selectStateFromDropdown(stateAbbrev, stateFull, stateLower, element);
+      }, 300);
+
+      element.dataset.simplerfyState = 'pending';
+      filled = true;
+    }
+  });
+
+  return filled;
+}
+
+// Helper to select state from an open dropdown
+function selectStateFromDropdown(stateAbbrev, stateFull, stateLower, triggerElement) {
+  // Look for options in any open listbox/dropdown
+  const optionSelectors = [
+    '[role="option"]',
+    '[role="menuitem"]',
+    '[data-automation-id*="option"]',
+    '[data-automation-id*="menuItem"]',
+    'li[tabindex]'
+  ];
+
+  let found = false;
+
+  for (const selector of optionSelectors) {
+    if (found) break;
+
+    document.querySelectorAll(selector).forEach(option => {
+      if (found) return;
+
+      const optionText = (option.textContent || '').toLowerCase().trim();
+
+      // Match state abbreviation or full name
+      if (optionText === stateAbbrev || optionText === stateFull ||
+          optionText.includes(stateFull) ||
+          optionText.startsWith(stateAbbrev + ' ') || optionText.startsWith(stateAbbrev + '-') ||
+          (optionText.length < 5 && optionText.includes(stateAbbrev)) ||
+          optionText === stateLower) {
+        option.click();
+        if (triggerElement) {
+          triggerElement.dataset.simplerfyState = 'true';
+        }
+        found = true;
+        console.log('Simplerfy: Selected state from Workday dropdown:', option.textContent);
+      }
+    });
+  }
+
+  // If no option found, try to close the dropdown by clicking elsewhere
+  if (!found) {
+    console.log('Simplerfy: State not found in dropdown options');
+    document.body.click();
+  }
+}
+
+// Special handler for job source fields (works with Workday and other custom forms)
+function handleJobSourceFields() {
+  let filled = false;
+
+  // Keywords that indicate a "how did you hear about us" field
+  const jobSourceKeywords = ['hear about', 'how did you', 'source', 'find us', 'learn about', 'discover', 'referred', 'recruiting'];
+
+  // Look for all select elements and check their labels/context
+  document.querySelectorAll('select').forEach(select => {
+    if (select.dataset.simplerfyJobSource) return;
+
+    // Check if this is a job source field by looking at nearby text
+    const parent = select.closest('div, fieldset, section, li, label');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+
+    const isJobSource = jobSourceKeywords.some(keyword => nearbyText.includes(keyword));
+
+    if (isJobSource) {
+      // Try to find and select LinkedIn option
+      for (const option of select.options) {
+        const optionText = (option.text || '').toLowerCase();
+        const optionValue = (option.value || '').toLowerCase();
+        const optionLabel = (option.label || '').toLowerCase();
+
+        if (optionText.indexOf('linkedin') !== -1 ||
+            optionValue.indexOf('linkedin') !== -1 ||
+            optionLabel.indexOf('linkedin') !== -1) {
+          select.value = option.value;
+          triggerInputEvents(select);
+          select.dataset.simplerfyJobSource = 'true';
+          filled = true;
+          console.log('Simplerfy: Found job source dropdown, selected LinkedIn');
+          break;
+        }
+      }
+    }
+  });
+
+  // Look for radio button groups
+  const radioGroups = {};
+  document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    const name = radio.name;
+    if (name && !radioGroups[name]) {
+      radioGroups[name] = [];
+    }
+    if (name) {
+      radioGroups[name].push(radio);
+    }
+  });
+
+  Object.values(radioGroups).forEach(radios => {
+    if (radios[0].dataset.simplerfyJobSource) return;
+
+    // Check if this radio group is a job source field
+    const parent = radios[0].closest('div, fieldset, section, li');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+
+    const isJobSource = jobSourceKeywords.some(keyword => nearbyText.includes(keyword));
+
+    if (isJobSource) {
+      // Find the LinkedIn option
+      for (const radio of radios) {
+        const labelText = getLabelText(radio);
+        const radioValue = (radio.value || '').toLowerCase();
+
+        if (labelText.indexOf('linkedin') !== -1 || radioValue.indexOf('linkedin') !== -1) {
+          radio.checked = true;
+          triggerInputEvents(radio);
+          radios.forEach(r => r.dataset.simplerfyJobSource = 'true');
+          filled = true;
+          console.log('Simplerfy: Found job source radio, selected LinkedIn');
+          break;
+        }
+      }
+    }
+  });
+
+  // Handle Workday custom dropdowns (they use buttons and listboxes)
+  document.querySelectorAll('[data-automation-id*="source"], [data-automation-id*="Source"], [aria-label*="hear"], [aria-label*="source"]').forEach(element => {
+    if (element.dataset.simplerfyJobSource) return;
+
+    // Check if it's a Workday dropdown button
+    if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'listbox' || element.getAttribute('role') === 'combobox') {
+      // Click to open the dropdown
+      element.click();
+
+      // Wait a bit for dropdown to open, then look for LinkedIn option
+      setTimeout(() => {
+        const listbox = document.querySelector('[role="listbox"], [data-automation-id="menuItem"]');
+        if (listbox) {
+          const options = listbox.querySelectorAll('[role="option"], li, [data-automation-id*="option"]');
+          options.forEach(option => {
+            const optionText = (option.textContent || '').toLowerCase();
+            if (optionText.indexOf('linkedin') !== -1) {
+              option.click();
+              element.dataset.simplerfyJobSource = 'true';
+              filled = true;
+              console.log('Simplerfy: Found Workday job source dropdown, selected LinkedIn');
+            }
+          });
+        }
+      }, 300);
+    }
+  });
+
+  // Look for custom dropdown/combobox components by aria labels
+  document.querySelectorAll('[role="combobox"], [role="listbox"], [aria-haspopup="listbox"]').forEach(element => {
+    if (element.dataset.simplerfyJobSource) return;
+
+    const parent = element.closest('div, fieldset, section');
+    const nearbyText = parent ? parent.textContent.toLowerCase() : '';
+    const ariaLabel = (element.getAttribute('aria-label') || '').toLowerCase();
+
+    const isJobSource = jobSourceKeywords.some(keyword =>
+      nearbyText.includes(keyword) || ariaLabel.includes(keyword)
+    );
+
+    if (isJobSource) {
+      // Click to open
+      element.click();
+
+      setTimeout(() => {
+        // Look for options in any open listbox
+        document.querySelectorAll('[role="option"], [role="menuitem"]').forEach(option => {
+          const optionText = (option.textContent || '').toLowerCase();
+          if (optionText.indexOf('linkedin') !== -1) {
+            option.click();
+            element.dataset.simplerfyJobSource = 'true';
+            filled = true;
+            console.log('Simplerfy: Found custom dropdown job source, selected LinkedIn');
+          }
+        });
+      }, 300);
+    }
+  });
+
+  return filled;
 }
 
 // Trigger events

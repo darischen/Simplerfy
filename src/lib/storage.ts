@@ -29,7 +29,13 @@ export interface UserProfile {
     lastName: string;
     email: string;
     phone: string;
-    location: string;
+    // Address fields for accurate autofill
+    streetAddress: string;
+    streetAddress2?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
     linkedin?: string;
     github?: string;
     website?: string;
@@ -112,7 +118,12 @@ export function createEmptyProfile(): UserProfile {
       lastName: '',
       email: '',
       phone: '',
-      location: '',
+      streetAddress: '',
+      streetAddress2: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
     },
     education: [],
     experience: [],
