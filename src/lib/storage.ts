@@ -1,3 +1,27 @@
+export interface ResumeFile {
+  id: string;
+  name: string;
+  fileName: string;
+  fileData: string; // base64 encoded PDF
+  fileType: string;
+  createdAt: string;
+}
+
+export interface ApplicationPreferences {
+  jobSource: string; // "LinkedIn", "Indeed", etc.
+  isOver18: boolean;
+  isAuthorizedToWork: boolean;
+  requiresSponsorship: boolean;
+  willingToRelocate: boolean;
+  citizenship: string;
+  desiredSalary: string;
+  availableStartDate: string;
+  gender: string;
+  veteranStatus: string;
+  disabilityStatus: string;
+  ethnicity: string;
+}
+
 export interface UserProfile {
   id: string;
   basics: {
@@ -48,6 +72,8 @@ export interface UserProfile {
     createdAt: string;
     updatedAt: string;
   }[];
+  resumeFiles: ResumeFile[];
+  applicationPreferences: ApplicationPreferences;
 }
 
 export interface JobApplication {
@@ -93,7 +119,59 @@ export function createEmptyProfile(): UserProfile {
     projects: [],
     skills: [],
     resumes: [],
+    resumeFiles: [],
+    applicationPreferences: {
+      jobSource: 'LinkedIn',
+      isOver18: true,
+      isAuthorizedToWork: true,
+      requiresSponsorship: false,
+      willingToRelocate: false,
+      citizenship: '',
+      desiredSalary: '',
+      availableStartDate: '',
+      gender: '',
+      veteranStatus: 'I am not a protected veteran',
+      disabilityStatus: 'I do not wish to answer',
+      ethnicity: '',
+    },
   };
+}
+
+// Resume file functions
+export function addResumeFile(
+  name: string,
+  fileName: string,
+  fileData: string,
+  fileType: string
+): string {
+  const profile = getProfile() || createEmptyProfile();
+  const id = crypto.randomUUID();
+
+  profile.resumeFiles = profile.resumeFiles || [];
+  profile.resumeFiles.push({
+    id,
+    name,
+    fileName,
+    fileData,
+    fileType,
+    createdAt: new Date().toISOString(),
+  });
+
+  saveProfile(profile);
+  return id;
+}
+
+export function deleteResumeFile(id: string): void {
+  const profile = getProfile();
+  if (!profile) return;
+
+  profile.resumeFiles = (profile.resumeFiles || []).filter((r) => r.id !== id);
+  saveProfile(profile);
+}
+
+export function getResumeFiles(): ResumeFile[] {
+  const profile = getProfile();
+  return profile?.resumeFiles || [];
 }
 
 // Application functions
