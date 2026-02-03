@@ -305,7 +305,7 @@ export default function TailorPage() {
         {/* Original PDF */}
         <div className="space-y-2">
           <h2 className="text-xl font-semibold">Original Resume</h2>
-          <div className="h-[800px] border rounded-lg overflow-hidden bg-gray-100">
+          <div className="h-200 border rounded-lg overflow-hidden bg-gray-100">
             {originalPdf ? (
               <iframe
                 src={`data:application/pdf;base64,${originalPdf}`}
@@ -341,7 +341,7 @@ export default function TailorPage() {
               </div>
             )}
           </div>
-          <div className="h-[800px] border rounded-lg overflow-hidden bg-gray-100">
+          <div className="h-200 border rounded-lg overflow-hidden bg-gray-100">
             {tailoredPdf ? (
               <iframe
                 src={`data:application/pdf;base64,${tailoredPdf}`}

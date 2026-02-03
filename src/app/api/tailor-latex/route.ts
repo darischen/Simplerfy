@@ -45,6 +45,7 @@ ${latex}
    - Prioritize quality over quantity - fewer strong bullets are better than many weak ones
    - Remove redundant information
    - If needed, remove the least relevant job experience or project entirely
+   - However, it is important that it fills up as much space inside the ONE page as possible. If there is space to add more content, then add it.
 
 Return ONLY the modified LaTeX code. No explanation, no markdown code blocks, just the raw LaTeX.`,
         },

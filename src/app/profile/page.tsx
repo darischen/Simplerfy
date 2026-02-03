@@ -66,13 +66,13 @@ function getInitialProfile(): UserProfile {
       isOver18: true,
       isAuthorizedToWork: true,
       requiresSponsorship: false,
-      willingToRelocate: false,
+      willingToRelocate: true,
       citizenship: '',
       desiredSalary: '',
       availableStartDate: '',
-      gender: '',
+      gender: 'Male',
       veteranStatus: 'I am not a protected veteran',
-      disabilityStatus: 'I do not wish to answer',
+      disabilityStatus: 'No, I do no have a disability',
       ethnicity: '',
     };
   }
