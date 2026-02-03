@@ -42,6 +42,7 @@ Write a professional, authentic answer to this question that:
 4. Is concise (2-4 paragraphs, around 150-250 words)
 5. Uses specific examples from their experience when possible
 6. Sounds natural and conversational, not robotic
+7. AVOID using em dashes (—) anywhere in your response. Use only commas, periods, or other standard punctuation. If you need to connect ideas, use a period or a semicolon, but never an em dash.
 
 Write the answer in first person as if the applicant is speaking/writing it directly. Do not include any preamble or explanation - just write the answer itself.`,
         },
