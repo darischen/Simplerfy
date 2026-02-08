@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Simplerfy - Job Application Autofill",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Autofill job application forms using your Simplerfy profile data",
   "icons": {
     "16": "icons/icon16.png",
@@ -20,13 +20,17 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
     "*://*.greenhouse.io/*",
+    "*://boards.greenhouse.io/*",
     "*://boards.eu.greenhouse.io/*",
+    "*://job-boards.greenhouse.io/*",
     "*://*.lever.co/*",
+    "*://jobs.lever.co/*",
     "*://*.workday.com/*",
     "*://*.myworkdayjobs.com/*",
     "*://*.icims.com/*",
@@ -34,7 +38,8 @@
     "*://*.ashbyhq.com/*",
     "*://*.jobvite.com/*",
     "*://*.taleo.net/*",
-    "*://*.breezy.hr/*"
+    "*://*.breezy.hr/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -43,8 +48,11 @@
     {
       "matches": [
         "*://*.greenhouse.io/*",
+        "*://boards.greenhouse.io/*",
         "*://boards.eu.greenhouse.io/*",
+        "*://job-boards.greenhouse.io/*",
         "*://*.lever.co/*",
+        "*://jobs.lever.co/*",
         "*://*.workday.com/*",
         "*://*.myworkdayjobs.com/*",
         "*://*.icims.com/*",
@@ -55,7 +63,8 @@
         "*://*.breezy.hr/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

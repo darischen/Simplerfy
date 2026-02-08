@@ -41,6 +41,8 @@ export interface ParsedResume {
     bullets: string[];
     technologies: string[];
     link?: string;
+    startDate?: string;
+    endDate?: string;
   }[];
   skills: {
     category: string;
@@ -111,7 +113,9 @@ Return a JSON object with this exact structure:
       "description": "string (brief one-line description)",
       "bullets": ["string array of details"],
       "technologies": ["string array of tech used"],
-      "link": "string or null"
+      "link": "string or null",
+      "startDate": "string (Mon YYYY format) or null",
+      "endDate": "string (Mon YYYY format) or null"
     }
   ],
   "skills": [

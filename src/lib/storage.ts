@@ -66,6 +66,8 @@ export interface UserProfile {
     bullets: string[];
     technologies: string[];
     link?: string;
+    startDate?: string;
+    endDate?: string;
   }[];
   skills: {
     category: string;

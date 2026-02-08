@@ -159,6 +159,30 @@ async function syncProfile() {
   }
 }
 
+// Inject content script if not already present
+async function ensureContentScriptInjected(tabId) {
+  try {
+    // Try to ping the content script
+    await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    return true; // Content script is already there
+  } catch (e) {
+    // Content script not present, inject it
+    console.log('Content script not found, injecting...');
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId, allFrames: true },
+        files: ['content.js']
+      });
+      // Wait a bit for the script to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    } catch (injectionError) {
+      console.error('Failed to inject content script:', injectionError);
+      return false;
+    }
+  }
+}
+
 // Fill the current page with profile data
 async function fillPage() {
   setStatus('loading', 'Filling form...');
@@ -184,6 +208,14 @@ async function fillPage() {
     if (!tab) {
       setStatus('error', 'No active tab');
       showResult('error', 'Could not find active tab.');
+      return;
+    }
+
+    // Ensure content script is injected
+    const injected = await ensureContentScriptInjected(tab.id);
+    if (!injected) {
+      setStatus('error', 'Injection failed');
+      showResult('error', 'Could not inject autofill script. This page may not support extensions.');
       return;
     }
 
@@ -214,7 +246,7 @@ async function fillPage() {
 
     // Check if content script is not loaded
     if (error.message?.includes('Receiving end does not exist')) {
-      showResult('error', 'This page is not supported. Navigate to a job application page (Greenhouse, Lever, Workday, etc.).');
+      showResult('error', 'Could not connect to page. Try refreshing the page and clicking Fill again.');
     } else {
       showResult('error', 'Failed to fill form. Please refresh the page and try again.');
     }

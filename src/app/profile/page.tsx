@@ -43,11 +43,110 @@ interface ParsedResume {
     bullets: string[];
     technologies: string[];
     link?: string;
+    startDate?: string;
+    endDate?: string;
   }[];
   skills: {
     category: string;
     items: string[];
   }[];
+}
+
+// Convert "Mon YYYY" or "Month YYYY" format to "YYYY-MM" for month input
+function convertToMonthFormat(dateStr: string): string {
+  if (!dateStr) return '';
+
+  // Trim and normalize
+  const str = dateStr.trim();
+
+  // Already in YYYY-MM format
+  if (/^\d{4}-\d{2}$/.test(str)) return str;
+
+  // Handle "Present" or "Current"
+  if (str.toLowerCase() === 'present' || str.toLowerCase() === 'current') {
+    return '';
+  }
+
+  // Handle "Expected Mon YYYY" or "Expected Month YYYY" format
+  const expectedMatch = str.match(/expected\s+(\w+)[\s,.-]*(\d{4})/i);
+  if (expectedMatch) {
+    const month = parseMonth(expectedMatch[1]);
+    if (month) {
+      return `${expectedMatch[2]}-${month}`;
+    }
+  }
+
+  // Handle "Mon YYYY", "Month YYYY", "Mon. YYYY", "Month, YYYY" formats
+  const monthYearMatch = str.match(/([a-zA-Z]+)[\s,.-]*(\d{4})/);
+  if (monthYearMatch) {
+    const month = parseMonth(monthYearMatch[1]);
+    if (month) {
+      return `${monthYearMatch[2]}-${month}`;
+    }
+  }
+
+  // Handle "YYYY Mon" or "YYYY Month" format (reversed)
+  const yearMonthMatch = str.match(/(\d{4})[\s,.-]*([a-zA-Z]+)/);
+  if (yearMonthMatch) {
+    const month = parseMonth(yearMonthMatch[2]);
+    if (month) {
+      return `${yearMonthMatch[1]}-${month}`;
+    }
+  }
+
+  // Handle "MM/YYYY" or "M/YYYY" format
+  const slashMatch = str.match(/(\d{1,2})\/(\d{4})/);
+  if (slashMatch) {
+    const month = slashMatch[1].padStart(2, '0');
+    return `${slashMatch[2]}-${month}`;
+  }
+
+  // Handle "YYYY/MM" format
+  const slashMatch2 = str.match(/(\d{4})\/(\d{1,2})/);
+  if (slashMatch2) {
+    const month = slashMatch2[2].padStart(2, '0');
+    return `${slashMatch2[1]}-${month}`;
+  }
+
+  // Handle "MM-YYYY" format
+  const dashMatch = str.match(/(\d{1,2})-(\d{4})/);
+  if (dashMatch) {
+    const month = dashMatch[1].padStart(2, '0');
+    return `${dashMatch[2]}-${month}`;
+  }
+
+  // Handle just year "YYYY" (standalone)
+  const yearMatch = str.match(/^(\d{4})$/);
+  if (yearMatch) {
+    return `${yearMatch[1]}-01`;
+  }
+
+  // Handle year anywhere in string as fallback
+  const anyYearMatch = str.match(/(\d{4})/);
+  if (anyYearMatch) {
+    return `${anyYearMatch[1]}-01`;
+  }
+
+  console.log('Could not parse date:', str);
+  return '';
+}
+
+function parseMonth(monthStr: string): string | null {
+  const months: Record<string, string> = {
+    'jan': '01', 'january': '01',
+    'feb': '02', 'february': '02',
+    'mar': '03', 'march': '03',
+    'apr': '04', 'april': '04',
+    'may': '05',
+    'jun': '06', 'june': '06',
+    'jul': '07', 'july': '07',
+    'aug': '08', 'august': '08',
+    'sep': '09', 'sept': '09', 'september': '09',
+    'oct': '10', 'october': '10',
+    'nov': '11', 'november': '11',
+    'dec': '12', 'december': '12',
+  };
+  return months[monthStr.toLowerCase()] || null;
 }
 
 function getInitialProfile(): UserProfile {
@@ -75,6 +174,20 @@ function getInitialProfile(): UserProfile {
       disabilityStatus: 'No, I do no have a disability',
       ethnicity: '',
     };
+  } else {
+    // Ensure all applicationPreferences fields exist for profiles created before these fields were added
+    if (profile.applicationPreferences.veteranStatus === undefined) {
+      profile.applicationPreferences.veteranStatus = 'I am not a protected veteran';
+    }
+    if (profile.applicationPreferences.disabilityStatus === undefined) {
+      profile.applicationPreferences.disabilityStatus = 'I do not wish to answer';
+    }
+    if (profile.applicationPreferences.gender === undefined) {
+      profile.applicationPreferences.gender = '';
+    }
+    if (profile.applicationPreferences.ethnicity === undefined) {
+      profile.applicationPreferences.ethnicity = '';
+    }
   }
   // Migrate old location field to new address fields
   const oldProfile = profile as UserProfile & { basics: { location?: string } };
@@ -95,6 +208,47 @@ function getInitialProfile(): UserProfile {
   if (!profile.basics.state) profile.basics.state = '';
   if (!profile.basics.zipCode) profile.basics.zipCode = '';
   if (!profile.basics.country) profile.basics.country = '';
+
+  // Migrate dates to YYYY-MM format for <input type="month"> compatibility
+  let datesMigrated = false;
+  for (const edu of profile.education) {
+    const convertedStart = convertToMonthFormat(edu.startDate);
+    const convertedEnd = convertToMonthFormat(edu.endDate);
+    if (convertedStart !== edu.startDate || convertedEnd !== edu.endDate) {
+      edu.startDate = convertedStart;
+      edu.endDate = convertedEnd;
+      datesMigrated = true;
+    }
+  }
+  for (const exp of profile.experience) {
+    const convertedStart = convertToMonthFormat(exp.startDate);
+    const convertedEnd = convertToMonthFormat(exp.endDate);
+    if (convertedStart !== exp.startDate || convertedEnd !== exp.endDate) {
+      exp.startDate = convertedStart;
+      exp.endDate = convertedEnd;
+      datesMigrated = true;
+    }
+  }
+  for (const proj of profile.projects) {
+    if (proj.startDate) {
+      const convertedStart = convertToMonthFormat(proj.startDate);
+      if (convertedStart !== proj.startDate) {
+        proj.startDate = convertedStart;
+        datesMigrated = true;
+      }
+    }
+    if (proj.endDate) {
+      const convertedEnd = convertToMonthFormat(proj.endDate);
+      if (convertedEnd !== proj.endDate) {
+        proj.endDate = convertedEnd;
+        datesMigrated = true;
+      }
+    }
+  }
+  if (datesMigrated) {
+    saveProfile(profile);
+  }
+
   return profile;
 }
 
@@ -121,7 +275,7 @@ function isExperienceDuplicate(
   return (
     normalizeString(existing.company) === normalizeString(newExp.company) &&
     normalizeString(existing.title) === normalizeString(newExp.title) &&
-    normalizeString(existing.startDate) === normalizeString(newExp.startDate)
+    normalizeString(existing.startDate) === normalizeString(convertToMonthFormat(newExp.startDate))
   );
 }
 
@@ -249,6 +403,7 @@ export default function ProfilePage() {
       skipped: { education: number; experience: number; projects: number; skills: number };
     };
   } => {
+    console.log('Raw parsed data:', JSON.stringify(parsed, null, 2));
     const stats = {
       added: { education: 0, experience: 0, projects: 0, skills: 0 },
       skipped: { education: 0, experience: 0, projects: 0, skills: 0 },
@@ -291,15 +446,32 @@ export default function ProfilePage() {
     // Merge education
     const newEducation = [...currentProfile.education];
     for (const edu of parsed.education) {
-      const isDuplicate = currentProfile.education.some((existing) =>
+      const existingIndex = newEducation.findIndex((existing) =>
         isEducationDuplicate(existing, edu)
       );
-      if (isDuplicate) {
+      if (existingIndex >= 0) {
+        // Update dates on existing entry if they were empty or unconverted
+        const convertedStart = convertToMonthFormat(edu.startDate);
+        const convertedEnd = convertToMonthFormat(edu.endDate);
+        if (convertedStart && !newEducation[existingIndex].startDate) {
+          newEducation[existingIndex] = { ...newEducation[existingIndex], startDate: convertedStart };
+        }
+        if (convertedEnd && !newEducation[existingIndex].endDate) {
+          newEducation[existingIndex] = { ...newEducation[existingIndex], endDate: convertedEnd };
+        }
+        if (edu.gpa && !newEducation[existingIndex].gpa) {
+          newEducation[existingIndex] = { ...newEducation[existingIndex], gpa: edu.gpa };
+        }
         stats.skipped.education++;
       } else {
         newEducation.push({
           id: crypto.randomUUID(),
-          ...edu,
+          institution: edu.institution,
+          degree: edu.degree,
+          field: edu.field,
+          startDate: convertToMonthFormat(edu.startDate),
+          endDate: convertToMonthFormat(edu.endDate),
+          gpa: edu.gpa,
         });
         stats.added.education++;
       }
@@ -308,15 +480,30 @@ export default function ProfilePage() {
     // Merge experience
     const newExperience = [...currentProfile.experience];
     for (const exp of parsed.experience) {
-      const isDuplicate = currentProfile.experience.some((existing) =>
+      const existingIndex = newExperience.findIndex((existing) =>
         isExperienceDuplicate(existing, exp)
       );
-      if (isDuplicate) {
+      if (existingIndex >= 0) {
+        // Update dates on existing entry if they were empty or unconverted
+        const convertedStart = convertToMonthFormat(exp.startDate);
+        const convertedEnd = exp.current ? '' : convertToMonthFormat(exp.endDate);
+        if (convertedStart && !newExperience[existingIndex].startDate) {
+          newExperience[existingIndex] = { ...newExperience[existingIndex], startDate: convertedStart };
+        }
+        if (convertedEnd && !newExperience[existingIndex].endDate) {
+          newExperience[existingIndex] = { ...newExperience[existingIndex], endDate: convertedEnd };
+        }
         stats.skipped.experience++;
       } else {
         newExperience.push({
           id: crypto.randomUUID(),
-          ...exp,
+          company: exp.company,
+          title: exp.title,
+          location: exp.location,
+          startDate: convertToMonthFormat(exp.startDate),
+          endDate: exp.current ? '' : convertToMonthFormat(exp.endDate),
+          current: exp.current,
+          bullets: exp.bullets,
         });
         stats.added.experience++;
       }
@@ -333,7 +520,13 @@ export default function ProfilePage() {
       } else {
         newProjects.push({
           id: crypto.randomUUID(),
-          ...proj,
+          name: proj.name,
+          description: proj.description,
+          bullets: proj.bullets,
+          technologies: proj.technologies,
+          link: proj.link,
+          startDate: convertToMonthFormat(proj.startDate || ''),
+          endDate: convertToMonthFormat(proj.endDate || ''),
         });
         stats.added.projects++;
       }
@@ -541,6 +734,8 @@ export default function ProfilePage() {
           bullets: [''],
           technologies: [],
           link: '',
+          startDate: '',
+          endDate: '',
         },
       ],
     });
@@ -1001,12 +1196,11 @@ export default function ProfilePage() {
                       Start Date
                     </label>
                     <input
-                      type="text"
+                      type="month"
                       value={edu.startDate}
                       onChange={(e) =>
                         updateEducation(edu.id, 'startDate', e.target.value)
                       }
-                      placeholder="Sep 2020"
                       className="w-full p-2 border rounded-lg text-black bg-white"
                     />
                   </div>
@@ -1015,12 +1209,11 @@ export default function ProfilePage() {
                       End Date
                     </label>
                     <input
-                      type="text"
+                      type="month"
                       value={edu.endDate}
                       onChange={(e) =>
                         updateEducation(edu.id, 'endDate', e.target.value)
                       }
-                      placeholder="Jun 2024 or Expected Jun 2024"
                       className="w-full p-2 border rounded-lg text-black bg-white"
                     />
                   </div>
@@ -1131,12 +1324,11 @@ export default function ProfilePage() {
                       Start Date
                     </label>
                     <input
-                      type="text"
+                      type="month"
                       value={exp.startDate}
                       onChange={(e) =>
                         updateExperience(exp.id, 'startDate', e.target.value)
                       }
-                      placeholder="Jun 2023"
                       className="w-full p-2 border rounded-lg text-black bg-white"
                     />
                   </div>
@@ -1145,12 +1337,11 @@ export default function ProfilePage() {
                       End Date
                     </label>
                     <input
-                      type="text"
+                      type="month"
                       value={exp.endDate}
                       onChange={(e) =>
                         updateExperience(exp.id, 'endDate', e.target.value)
                       }
-                      placeholder={exp.current ? 'Present' : 'Sep 2023'}
                       disabled={exp.current}
                       className="w-full p-2 border rounded-lg text-black bg-white disabled:bg-gray-100"
                     />
@@ -1243,6 +1434,32 @@ export default function ProfilePage() {
                         updateProject(proj.id, 'link', e.target.value)
                       }
                       placeholder="https://github.com/..."
+                      className="w-full p-2 border rounded-lg text-black bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date (optional)
+                    </label>
+                    <input
+                      type="month"
+                      value={proj.startDate || ''}
+                      onChange={(e) =>
+                        updateProject(proj.id, 'startDate', e.target.value)
+                      }
+                      className="w-full p-2 border rounded-lg text-black bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date (optional)
+                    </label>
+                    <input
+                      type="month"
+                      value={proj.endDate || ''}
+                      onChange={(e) =>
+                        updateProject(proj.id, 'endDate', e.target.value)
+                      }
                       className="w-full p-2 border rounded-lg text-black bg-white"
                     />
                   </div>
