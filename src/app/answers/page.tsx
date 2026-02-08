@@ -107,7 +107,7 @@ export default function AnswersPage() {
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-semibold">Job Description</h2>
           <textarea
-            className="w-full flex-1 min-h-[400px] p-4 border rounded-lg font-mono text-sm text-black bg-white"
+            className="w-full flex-1 min-h-100 p-4 border rounded-lg font-mono text-sm text-black bg-white"
             placeholder="Paste the job description here..."
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
