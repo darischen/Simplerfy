@@ -171,7 +171,7 @@ export default function AnswersPage() {
       {generatedAnswer && (
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Generated Answer</h2>
+            <h2 className="text-xl text-black font-semibold">Generated Answer</h2>
             <button
               onClick={handleCopy}
               className="px-4 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded cursor-pointer text-black"
