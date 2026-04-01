@@ -260,7 +260,7 @@ export default function TrackerPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
-            <h2 className="text-xl font-semibold mb-4">Add Application</h2>
+            <h2 className="text-xl text-black font-semibold mb-4">Add Application</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
