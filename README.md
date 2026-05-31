@@ -4,13 +4,13 @@ A comprehensive job application management and resume tailoring platform powered
 
 ## Features
 
-### 📊 Dashboard
+### Dashboard
 - **Application Overview** - View statistics on your job applications across different stages (applied, interviewing, offers)
 - **Recent Applications** - Track your most recent applications at a glance
 - **Quick Actions** - Easy access to tailoring, tracking, and answer generation features
 - **Profile Setup** - Reminder to complete your profile for enhanced functionality
 
-### 🎯 Resume Tailor
+### Resume Tailor
 The core feature of Simplerfy that helps optimize resumes for specific job postings:
 
 - **PDF to LaTeX Conversion** - Upload your resume PDF, which is automatically converted to clean, compilable LaTeX code using Claude AI
@@ -20,7 +20,7 @@ The core feature of Simplerfy that helps optimize resumes for specific job posti
 - **PDF Preview** - Side-by-side comparison of original and tailored resumes
 - **Export Options** - Download tailored PDF or copy LaTeX code for further customization
 
-### 👤 Profile Management
+### Profile Management
 Store your professional information for quick access and application autofill:
 - Personal details (name, email, phone, address)
 - Education history
@@ -28,14 +28,14 @@ Store your professional information for quick access and application autofill:
 - Application preferences (salary expectations, relocation, sponsorship, etc.)
 - Demographic information (optional)
 
-### 📋 Application Tracker
+### Application Tracker
 Keep organized records of your job applications:
 - Track application status (applied, screening, interviewing, offer, rejected)
 - Store company and position information
 - Record application dates and details
 - View application history and statistics
 
-### 💡 Answer Generator
+### Answer Generator
 *(Feature in development)*
 Generate AI-powered answers for job application questions tailored to specific roles and companies.
 
